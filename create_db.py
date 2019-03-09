@@ -19,7 +19,8 @@ cursor.execute("""CREATE TABLE project
 cursor.execute("""CREATE TABLE developer_project
                   (
                   developer INTEGER REFERENCES developer(username) ON DELETE CASCADE,
-                  project INTEGER REFERENCES project(project_id) ON DELETE CASCADE
+                  project INTEGER REFERENCES project(project_id) ON DELETE CASCADE,
+                  impact smallint 
                   )
                """)
 
