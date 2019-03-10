@@ -15,7 +15,7 @@ cursor.execute("""CREATE TABLE project
                   project_id char (255) PRIMARY KEY,
                   channel INTEGER REFERENCES channel(name) ON DELETE CASCADE
                   )
-               """)
+               """) # TODO: add name to project
 cursor.execute("""CREATE TABLE developer_project
                   (
                   developer INTEGER REFERENCES developer(username) ON DELETE CASCADE,
