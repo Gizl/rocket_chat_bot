@@ -8,14 +8,15 @@ cursor.execute("""CREATE TABLE channel
                   (name char (255) PRIMARY KEY)
                """)
 cursor.execute("""CREATE TABLE developer
-                  (username char (255) PRIMARY KEY)
+                  (username char (255) PRIMARY KEY,
+                  gitlab char(255))
                """)
 cursor.execute("""CREATE TABLE project
                   (
                   project_id char (255) PRIMARY KEY,
                   channel INTEGER REFERENCES channel(name) ON DELETE CASCADE
                   )
-               """) # TODO: add name to project
+               """)
 cursor.execute("""CREATE TABLE developer_project
                   (
                   developer INTEGER REFERENCES developer(username) ON DELETE CASCADE,
