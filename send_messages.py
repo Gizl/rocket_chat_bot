@@ -94,7 +94,7 @@ class Notifier:
             channel_message = "\n".join(
                 [f"\n{f'@{key}' if key else '*Unknown Users*'}: \n{f'{nl}'.join([str(x.get('web_url')) for x in values])}" for key, values in
                  channel_message.items()])
-            channel_message = f"Please, review those MRs today (you need to press thumb up/upvote:\n{channel_message}\n"
+            channel_message = f"Please, review those MRs today (you need to press thumb up/upvote):\n{channel_message}\n"
             self.rocket.chat_post_message(channel_message, channel=channel_name, alias='BOT NOTIFICATION')
         if for_merge:
             for_merge = '\n'.join(for_merge)
