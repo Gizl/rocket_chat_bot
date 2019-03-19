@@ -55,7 +55,7 @@ class Notifier:
                         merge_requests[i][1] -= 1
                         counter += 1
                 channel_message = self.set_leftovers(channel_message, developers, merge_requests)
-            self.send_notifications(channel_message, all_for_merge, all_conflicts)
+            self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts)
 
     def get_merge_requests(self, approvers_number, project_id):
         for_merge = []
@@ -64,6 +64,8 @@ class Notifier:
         url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
         merge_requests = requests.get(url, params=self.request_params).json()
         for merge_request in merge_requests:
+            if merge_request.get('work_in_progress'):
+                continue
             if merge_request.get('merge_status') == 'cannot_be_merged':
                 conflicts.append(merge_request)
                 continue
@@ -86,13 +88,13 @@ class Notifier:
                 formatted_mr.append([merge_request, approvers_number])
         return formatted_mr, for_merge, conflicts
 
-    def send_notifications(self, channel_message, for_merge, conflicts):
+    def send_notifications(self, channel_name, channel_message, for_merge, conflicts):
         nl = "\n"
         if channel_message:
             channel_message = "\n".join(
-                [f"\n@{key}: \n{f'{nl}'.join([str(x.get('web_url')) for x in values])}" for key, values in
+                [f"\n{f'@{key}' if key else '*Unknown Users*'}: \n{f'{nl}'.join([str(x.get('web_url')) for x in values])}" for key, values in
                  channel_message.items()])
-            channel_message = f"Please, review those MRs today:\n{channel_message}\n"
+            channel_message = f"Please, review those MRs today (you need to press thumb up/upvote:\n{channel_message}\n"
             self.rocket.chat_post_message(channel_message, channel='test-bot', alias='BOT NOTIFICATION')
         if for_merge:
             for_merge = '\n'.join(for_merge)
@@ -100,9 +102,9 @@ class Notifier:
             self.rocket.chat_post_message(for_merge, channel='test-bot', alias='BOT NOTIFICATION')
         if conflicts:
             conflicts = "\n".join(
-                [f"\n@{key}: \n{f'{nl}'.join([x for x in values])}" for key, values in conflicts.items()])
+                [f"\n{f'@{key}' if key else '*Unknown Users*'}: \n{f'{nl}'.join([x for x in values])}" for key, values in conflicts.items()])
             conflicts = f"Please, check MRs for conflicts, unresolved discussions or failed pipelines:\n{conflicts}\n"
-            self.rocket.chat_post_message(conflicts, channel='test-bot', alias='BOT NOTIFICATION')
+            self.rocket.chat_post_message(conflicts, channel=channel_name, alias='BOT NOTIFICATION')
 
     def set_leftovers(self, channel_message, developers, merge_requests):
         while [x for x in merge_requests if x[1] > 0]:
