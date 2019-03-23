@@ -5,3 +5,4 @@ python-dotenv==0.10.1
 requests==2.21.0
 rocketchat-API==0.6.27
 urllib3==1.24.1
+websocket_client==0.56.0
