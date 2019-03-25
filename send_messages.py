@@ -2,6 +2,8 @@ import math
 import sqlite3
 from operator import itemgetter
 from random import randint
+from typing import List
+import datetime
 
 import requests
 from rocketchat_API.rocketchat import RocketChat
@@ -87,6 +89,20 @@ class Notifier:
             else:
                 formatted_mr.append([merge_request, approvers_number])
         return formatted_mr, for_merge, conflicts
+
+    def check_merge_requests_for_upvotes(self, channels: List[str], project_id):
+        url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
+        request_params = {"private_token": settings.GITLAB_TOKEN, "state": "merged",
+                          "created_after": datetime.date.today()}
+        merge_requests = requests.get(url, params=request_params).json()
+
+        channel_message = "MRs where upvotes are less than 2:\n"
+
+        for merge_request in merge_requests:
+            if merge_request.get('upvotes') < 2:
+                channel_message += merge_request.get('web_url') + '\n'
+
+        [self.rocket.chat_post_message(channel_message, channel=channel, alias='BOT NOTIFICATION') for channel in channels]
 
     def send_notifications(self, channel_name, channel_message, for_merge, conflicts):
         nl = "\n"
