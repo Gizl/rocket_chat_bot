@@ -9,6 +9,7 @@ import requests
 from rocketchat_API.rocketchat import RocketChat
 
 import settings
+import utils
 
 
 class Notifier:
@@ -34,9 +35,11 @@ class Notifier:
             channel_message = {}
             all_for_merge = []
             all_conflicts = {}
+            projects = {}
             for project_id, developers in project_relations.items():
                 total_impact = sum([x[2] for x in developers])
                 approvers_number = 2 if len(developers) > 3 else 1
+                projects[project_id] = approvers_number
                 merge_requests, for_merge, conflicts = self.get_merge_requests(approvers_number, project_id)
                 all_for_merge.extend(for_merge)
                 developers_dict = {y:x for x, y, _ in developers}
@@ -57,7 +60,7 @@ class Notifier:
                         merge_requests[i][1] -= 1
                         counter += 1
                 channel_message = self.set_leftovers(channel_message, developers, merge_requests)
-            self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts)
+            self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts, projects)
 
     def get_merge_requests(self, approvers_number, project_id):
         for_merge = []
@@ -90,21 +93,8 @@ class Notifier:
                 formatted_mr.append([merge_request, approvers_number])
         return formatted_mr, for_merge, conflicts
 
-    def check_merge_requests_for_upvotes(self, channels: List[str], project_id):
-        url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
-        request_params = {"private_token": settings.GITLAB_TOKEN, "state": "merged",
-                          "created_after": datetime.date.today()}
-        merge_requests = requests.get(url, params=request_params).json()
-
-        channel_message = "MRs where upvotes are less than 2:\n"
-
-        for merge_request in merge_requests:
-            if merge_request.get('upvotes') < 2:
-                channel_message += merge_request.get('web_url') + '\n'
-
-        [self.rocket.chat_post_message(channel_message, channel=channel, alias='BOT NOTIFICATION') for channel in channels]
-
-    def send_notifications(self, channel_name, channel_message, for_merge, conflicts):
+    def send_notifications(self, channel_name, channel_message, for_merge, conflicts, projects):
+        utils.check_merged_requests_for_upvotes(channel_name, projects)
         nl = "\n"
         if channel_message:
             channel_message = "\n".join(
