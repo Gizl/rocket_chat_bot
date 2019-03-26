@@ -94,7 +94,6 @@ class Notifier:
         return formatted_mr, for_merge, conflicts
 
     def send_notifications(self, channel_name, channel_message, for_merge, conflicts, projects):
-        utils.check_merged_requests_for_upvotes(channel_name, projects)
         nl = "\n"
         if channel_message:
             channel_message = "\n".join(
@@ -111,6 +110,8 @@ class Notifier:
                 [f"\n{f'@{key}' if key else '*Unknown Users*'}: \n{f'{nl}'.join([x for x in values])}" for key, values in conflicts.items()])
             conflicts = f"Please, check MRs for conflicts, unresolved discussions or failed pipelines:\n{conflicts}\n"
             self.rocket.chat_post_message(conflicts, channel=channel_name, alias='BOT NOTIFICATION')
+
+        utils.check_merged_requests_for_upvotes(channel_name, projects)
 
     def set_leftovers(self, channel_message, developers, merge_requests):
         while [x for x in merge_requests if x[1] > 0]:
