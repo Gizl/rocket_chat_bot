@@ -6,19 +6,30 @@ from typing import List
 from rocketchat_API.rocketchat import RocketChat
 import settings
 import traceback
+import json
+from pprint import pprint
+
+
+class Message:
+    def __init__(self, channel_id: str, message: str):
+        self.__channel_id = channel_id
+        self.__message = message
+
+    def get_channel_id(self) -> str:
+        return self.__channel_id
+
+    def get_message(self) -> str:
+        return self.__message
 
 
 class RocketChatReader(threading.Thread):
-    """Создать инстанс со списком имен каналов в конструкторе(имена должны быть уникальны)"""
-    """Вызвать connect(), подключиться к ридеру get_messages_queue() и слушать сообщения из чатов"""
-    """Для динамического добавления/удаления подпиcок на каналы 
-        (только после вызова connect()) вызвать add_channels()/delete_channels()"""
-    """Для закрытия соединения у ридера вызвать close_connection()"""
 
-    def __init__(self, channel_names: List[str]):
+    def __init__(self, server: str, channel_names: List[str]):
+        """Attribute: server - Server name. Example: open.rocket.chat"""
         threading.Thread.__init__(self, daemon=True)
         self.__rocket = RocketChat(settings.ROCKET_USERNAME, settings.ROCKET_PASSWORD, server_url=settings.ROCKET_URL)
         self.__ws = websocket.WebSocket()
+        self.__server = server
         self.__is_closed = True
         self.__is_started = False
         self.__messages_queue = queue.Queue()
@@ -27,14 +38,20 @@ class RocketChatReader(threading.Thread):
 
     def connect(self) -> None:
         try:
-            self.__ws.connect("wss://open.rocket.chat/websocket")
+            self.__ws.connect("wss://%s/websocket" % self.__server)
 
-            self.__ws.send("{\"msg\": \"connect\","
-                           " \"version\": \"1\","
-                           " \"support\": [\"1\"]}")
+            connect_message = {"msg": "connect", "version": "1", "support": ["1"]}
+            self.__ws.send(json.dumps(connect_message))
 
-            self.__ws.send("{\"msg\": \"method\",\"method\": \"login\",\"id\": \"42\",\"params\":[{ \"resume\": "
-                           "\"" + settings.ROCKET_TOKEN + "\" }]}")
+            login_message = {
+                "msg": "method",
+                "method": "login",
+                "id": "42",
+                "params": [
+                    {"resume": settings.ROCKET_TOKEN}
+                ]
+            }
+            self.__ws.send(json.dumps(login_message))
 
             for channel_id in self.__channels.values():
                 self.__subscribe(channel_id)
@@ -47,6 +64,7 @@ class RocketChatReader(threading.Thread):
 
             print("RocketChatReader has started")
         except:
+            # print(traceback.format_exc())
             time.sleep(1)
             self.connect()
 
@@ -71,21 +89,32 @@ class RocketChatReader(threading.Thread):
         return self.__rocket.rooms_info(room_name=channel_name).json().get('room').get('_id')
 
     def __subscribe(self, channel_id) -> None:
-        self.__ws.send(
-            "{\"msg\": \"sub\",\"id\": \"" + channel_id + "\",\"name\": \"stream-room-messages\","
-                                                          "\"params\": [\"" + channel_id + "\",true]}")
+        subscribe_message = {
+            "msg": "sub",
+            "id": channel_id,
+            "name": "stream-room-messages",
+            "params": [
+                channel_id,
+                False
+            ]
+        }
+        self.__ws.send(json.dumps(subscribe_message))
 
     def __unsubscribe(self, channel_name):
-        self.__ws.send("{\"msg\": \"unsub\",\"id\": \"" + self.__channels.get(channel_name) + "\"}")
+        unsubscribe_message = {
+            "msg": "unsub",
+            "id": self.__channels.get(channel_name)
+        }
+        self.__ws.send(json.dumps(unsubscribe_message))
         del self.__channels[channel_name]
 
     def run(self):
         while True:
             try:
                 data = self.__ws.recv()
-                print(data)
+                data = json.loads(data)
             except:
-                # если ошибка не после вызова close_connection (разрыв соединения, timeout), то конектим обратно
+                # print(traceback.format_exc())
                 if not self.__is_closed:
                     print("Connection lost")
                     self.__ws.close()
@@ -94,26 +123,16 @@ class RocketChatReader(threading.Thread):
                 else:
                     break
             else:
-                if "ping" in data:
-                    # требование апи
-                    # self.__ws.send("{\"msg\": \"pong\"}")
-                    pass
-                # небольшой временный велосипед, для чтения только тела сообщения
-                elif "changed" in data and "stream-room-messages" in data:
-                    elements = data.split(',')
-                    msg = [elem for elem in elements if "msg" in elem]
-                    msg = msg[1][7:-1]
-                    self.__messages_queue.put(msg)
+                if data.get("msg") == "ping":
+                    self.__ws.send(json.dumps({"msg": "pong"}))
+                elif data.get("msg") == "changed" and data.get("collection") == "stream-room-messages":
+                    self.__messages_queue.put(Message(data.get("fields").get("args")[0].get("rid"),
+                                                      data.get("fields").get("args")[0].get("msg")))
 
 
 if __name__ == "__main__":
     names: List[str] = list()
-    names.append("channel_name")
-    reader = RocketChatReader(names)
+    reader = RocketChatReader("open.rocket.chat", names)
     reader.connect()
     while True:
         print(reader.get_messages_queue().get())
-        print(reader.get_messages_queue().get())
-        time.sleep(5)
-        reader.close_connection()
-        break
