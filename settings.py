@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 JIRA_NAME = ""
 JIRA_PASSWORD = r""
 JIRA_BASE_URL = "https://advinow.atlassian.net"
@@ -25,4 +24,4 @@ ROCKET_USERNAME = os.getenv("ROCKET_USERNAME")
 ROCKET_PASSWORD = os.getenv("ROCKET_PASSWORD")
 ROCKET_TOKEN = os.getenv("ROCKET_TOKEN")
 ROCKET_ID = os.getenv("ROCKET_ID")
->>>>>>> 330910cdb16bf6cc208034b97a8bc7a6020c721b
+
