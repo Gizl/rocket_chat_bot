@@ -21,8 +21,7 @@ def proceed_gitlab_merge_requests():
         user.auth()
         merges = user.mergerequests.list()
     except (gitlab.exceptions.GitlabAuthenticationError, gitlab.exceptions.GitlabHttpError) as error:
-        now = datetime.now().replace(microsecond=0)
-        logging.error("Unable to login with provided token. {0}".format(now))
+        logging.error("Unable to login with provided token.")
         return set()
 
     jira_urls = set()
@@ -49,26 +48,28 @@ def proceed_jira_tasks(jira_urls):
     options = {"server": JIRA_BASE_URL}
     jira = JIRA(options, basic_auth=(JIRA_NAME, JIRA_PASSWORD))
     regular_expression = re.compile(REGULAR_STRING_TASK)
-    now = datetime.now().replace(microsecond=0)
 
     for url in jira_urls:
         try:
             task_id = re.findall(regular_expression, url)[0][1]
         except IndexError:
-            logging.error("Couldn't find task ID in URL {0} {1}".format(url, now))
+            logging.error("Couldn't find task ID in URL {0}".format(url))
 
         try:
             for action in jira.transitions(task_id):
                 if action.get('name', '') == JIRA_TASK_STATUS:
                     transition_id = int(action['id'])
                     jira.transition_issue(task_id, transition_id)
-                    logging.info("Task {0} was updated to '{1}' status {2}".format(task_id, JIRA_TASK_STATUS, now))
+                    logging.info("Task {0} was updated to '{1}' status".format(task_id, JIRA_TASK_STATUS))
                     break
         except jira_exceptions.JIRAError:
-            logging.error("Couldn't proceed provided task {0} {1}".format(task_id, now))
+            logging.error("Couldn't proceed provided task {0}".format(task_id))
 
+
+logging.basicConfig(filename="logs.log", level=logging.INFO,
+                    format="%(asctime)s %(levelname)-10s %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S")
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="logs.log", level=logging.INFO)
     urls = proceed_gitlab_merge_requests()
     proceed_jira_tasks(urls)
