@@ -26,15 +26,3 @@ def check_merged_requests_for_upvotes(channels_name: str, projects: dict):
             rocket.chat_post_message(channel_message, channel=channels_name, alias='BOT NOTIFICATION')
         else:
             continue
-
-
-def ignore_wip_mr(project_id: str, mr_id: str, mr_link: str) -> bool:
-    print(f"WIP MR without <bot_ignore> detected!\n{mr_link}")
-    answer = input("Add <bot_ignore>? y/n:")
-    if answer == "y":
-        url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests/{mr_id}"
-        params = {"private_token": settings.GITLAB_TOKEN, "labels": "bot_ignore"}
-        requests.put(url, params=params)
-        return True
-    else:
-        return False

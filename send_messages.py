@@ -72,10 +72,8 @@ class Notifier:
         url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
         merge_requests = requests.get(url, params=self.request_params).json()
         for merge_request in merge_requests:
-            if merge_request.get('work_in_progress'):
-                if "bot_ignore" not in merge_request.get("labels") \
-                        and not utils.ignore_wip_mr(project_id,  merge_request.get("iid"), merge_request.get("web_url")):
-                    wip_mr.append(merge_request.get("web_url"))
+            if merge_request.get('work_in_progress') and "bot_ignore" not in merge_request.get("labels"):
+                wip_mr.append(merge_request.get("web_url"))
             if merge_request.get('merge_status') == 'cannot_be_merged':
                 conflicts.append(merge_request)
                 continue
@@ -118,7 +116,9 @@ class Notifier:
 
         if wip_mr:
             wip_mr_message = "".join([f"{mr}\n" for mr in wip_mr])
-            wip_mr_message = f"Please, check WIP MRs:\n{wip_mr_message}"
+            wip_mr_message = f"Please, check WIP MRs. " \
+                             f"You can add <bot_ignore> label to MR for ignoring in future notifications:" \
+                             f"\n{wip_mr_message}"
             self.rocket.chat_post_message(wip_mr_message, channel=channel_name, alias='BOT NOTIFICATION')
 
         utils.check_merged_requests_for_upvotes(channel_name, projects)
