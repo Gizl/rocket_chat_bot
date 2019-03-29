@@ -11,8 +11,6 @@ from settings import GITLAB_TOKEN, GITLAB_URL, JIRA_NAME, JIRA_PASSWORD, JIRA_BA
 def proceed_gitlab_merge_requests():
     """
     The function return a list of urls of jira tasks, which should be processed.
-    :param token: personal token from Gitlab profile
-    :param t: how many hours to the past to proceed Gitlab merges
     :return: list of URLS of Jira tasks, which should be closed
     """
     regular_expression = re.compile(REGULAR_STRING)
@@ -41,8 +39,6 @@ def proceed_jira_tasks(jira_urls):
     """
     The function will close the provided tasks in JIRA, if they actually exists.
     :param jira_urls: set of urls
-    :param name: You login name in JIRA. For example, itursunov.
-    :param pw: You password in JIRA. Be careful! If you provided incorrect password, it might triggering capture and you won't be able to turn it off after.
     :return: None
     """
     options = {"server": JIRA_BASE_URL}
