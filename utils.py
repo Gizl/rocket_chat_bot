@@ -2,6 +2,8 @@ import datetime
 import settings
 import requests
 from rocketchat_API.rocketchat import RocketChat
+from jira import JIRA, exceptions as jira_exceptions
+import logging
 
 
 def check_merged_requests_for_upvotes(channels_name: str, projects: dict):
@@ -26,3 +28,19 @@ def check_merged_requests_for_upvotes(channels_name: str, projects: dict):
             rocket.chat_post_message(channel_message, channel=channels_name, alias='BOT NOTIFICATION')
         else:
             continue
+
+
+def create_mr_jira_tasks(gitlab_project_id: str, jira_project, jira_user: str, task_type: str = "Task") -> None:
+    options = {"server": settings.JIRA_BASE_URL}
+    jira = JIRA(options, basic_auth=(settings.JIRA_NAME, settings.JIRA_PASSWORD))
+
+    request_params = {"private_token": settings.GITLAB_TOKEN, "state": "merged",
+                      "created_after": datetime.date.today() - datetime.timedelta(days=1)}
+    url = f"{settings.GITLAB_URL}projects/{gitlab_project_id}/merge_requests"
+
+    merge_requests = requests.get(url, params=request_params).json()
+
+    for mr in merge_requests:
+        new_issue = jira.create_issue(project=jira_project, summary=mr.get("title"),
+                                      description=mr.get('web_url'), issuetype={'name': task_type})
+        new_issue.update(assignee={"name": jira_user})
