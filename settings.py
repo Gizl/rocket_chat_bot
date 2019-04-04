@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urljoin
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -9,6 +10,7 @@ JIRA_NAME = os.getenv("JIRA_NAME")
 JIRA_PASSWORD = os.getenv("JIRA_PASSWORD")
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_TASK_STATUS = os.getenv("JIRA_TASK_STATUS")
+JIRA_TASK_PREVIOUS_STATUS = os.getenv("JIRA_TASK_PREVIOUS_STATUS")
 # DATABASE
 DB_PATH = os.getenv("DB_PATH")
 # GITLAB
@@ -22,6 +24,6 @@ ROCKET_TOKEN = os.getenv("ROCKET_TOKEN")
 ROCKET_ID = os.getenv("ROCKET_ID")
 # ADDITIONAL PARAMETERS
 TIME_WINDOW_IN_HOURS = 24
-REGULAR_STRING = r"{0}/browse/.*".format(JIRA_BASE_URL)
-REGULAR_STRING_TASK = r"({0}/browse/)(.*)$".format(JIRA_BASE_URL)
+REGULAR_STRING = urljoin(JIRA_BASE_URL, 'browse/.*')
+REGULAR_STRING_TASK = urljoin(JIRA_BASE_URL, 'browse/(.*)')
 

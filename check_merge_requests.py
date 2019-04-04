@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 import re
 import logging
+from urllib.parse import urlparse, urlunparse
 
 import gitlab
 from jira import JIRA, exceptions as jira_exceptions
 
-from settings import GITLAB_TOKEN, GITLAB_URL, JIRA_NAME, JIRA_PASSWORD, JIRA_BASE_URL, JIRA_TASK_STATUS, TIME_WINDOW_IN_HOURS, \
-                        REGULAR_STRING, REGULAR_STRING_TASK
+from settings import GITLAB_TOKEN, GITLAB_URL, JIRA_NAME, JIRA_PASSWORD, JIRA_BASE_URL, JIRA_TASK_STATUS, JIRA_TASK_PREVIOUS_STATUS, \
+                        TIME_WINDOW_IN_HOURS, REGULAR_STRING, REGULAR_STRING_TASK
 
 def proceed_gitlab_merge_requests():
     """
@@ -14,13 +15,22 @@ def proceed_gitlab_merge_requests():
     :return: list of URLS of Jira tasks, which should be closed
     """
     regular_expression = re.compile(REGULAR_STRING)
+    gitlab_url_parsed = urlparse(GITLAB_URL)
+    base_url = urlunparse((gitlab_url_parsed.scheme, gitlab_url_parsed.netloc, '', '', '', ''))
     try:
-        user = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_TOKEN)
-        user.auth()
-        merges = user.mergerequests.list()
-    except (gitlab.exceptions.GitlabAuthenticationError, gitlab.exceptions.GitlabHttpError) as error:
+        my_gitlab = gitlab.Gitlab(base_url, private_token=GITLAB_TOKEN)
+        my_gitlab.auth()
+    except (gitlab.exceptions.GitlabAuthenticationError, gitlab.exceptions.GitlabHttpError):
         logging.error("Unable to login with provided token.")
         return set()
+
+    merges = list()
+    for project in my_gitlab.projects.list(membership=True, archived=False):
+        try:
+            merges += project.mergerequests.list()
+        except (gitlab.exceptions.GitlabHttpError,
+                gitlab.exceptions.GitlabListError):  # Missing rights to check project's merge requests
+            pass
 
     jira_urls = set()
     t_now = datetime.now()
@@ -47,17 +57,19 @@ def proceed_jira_tasks(jira_urls):
 
     for url in jira_urls:
         try:
-            task_id = re.findall(regular_expression, url)[0][1]
+            task_id = re.findall(regular_expression, url)[0]
         except IndexError:
             logging.error("Couldn't find task ID in URL {0}".format(url))
-
+            break
         try:
-            for action in jira.transitions(task_id):
-                if action.get('name', '') == JIRA_TASK_STATUS:
-                    transition_id = int(action['id'])
-                    jira.transition_issue(task_id, transition_id)
-                    logging.info("Task {0} was updated to '{1}' status".format(task_id, JIRA_TASK_STATUS))
-                    break
+            previous_status = jira.issue(task_id).fields.status.name
+            if previous_status == JIRA_TASK_PREVIOUS_STATUS and previous_status != JIRA_TASK_STATUS:
+                for action in jira.transitions(task_id):
+                    if action.get('name', '') == JIRA_TASK_STATUS:
+                        transition_id = int(action['id'])
+                        jira.transition_issue(task_id, transition_id)
+                        logging.info("Task {0} was updated to '{1}' status".format(task_id, JIRA_TASK_STATUS))
+                        break
         except jira_exceptions.JIRAError:
             logging.error("Couldn't proceed provided task {0}".format(task_id))
 
