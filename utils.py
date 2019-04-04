@@ -41,6 +41,6 @@ def create_mr_jira_tasks(gitlab_project_id: str, jira_project, jira_user: str, t
     merge_requests = requests.get(url, params=request_params).json()
 
     for mr in merge_requests:
-        new_issue = jira.create_issue(project=jira_project, summary=mr.get("title"),
+        new_issue = jira.create_issue(project=jira_project, summary=f"OE2 {mr.get('title')}",
                                       description=mr.get('web_url'), issuetype={'name': task_type})
-        new_issue.update(assignee={"name": jira_user})
+        new_issue.update(assignee=jira_user)
