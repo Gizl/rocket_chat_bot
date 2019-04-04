@@ -10,6 +10,7 @@ from rocketchat_API.rocketchat import RocketChat
 
 import settings
 import utils
+import check_merge_requests
 
 
 class Notifier:
@@ -63,6 +64,8 @@ class Notifier:
                         counter += 1
                 channel_message = self.set_leftovers(channel_message, developers, merge_requests)
             self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts, projects, all_wip_mr)
+        urls = check_merge_requests.proceed_gitlab_merge_requests()
+        check_merge_requests.proceed_jira_tasks(urls)
 
     def get_merge_requests(self, approvers_number, project_id):
         for_merge = []

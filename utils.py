@@ -13,7 +13,7 @@ def check_merged_requests_for_upvotes(channels_name: str, projects: dict):
         url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
         merge_requests = requests.get(url, params=request_params).json()
 
-        channel_message = f"MRs where upvotes are less than {approvers_number}:\n"
+        channel_message = f"Unapproved MRs:\n"
 
         flag = False
 
