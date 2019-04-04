@@ -25,11 +25,10 @@ class Message:
 class RocketChatReader(threading.Thread):
 
     def __init__(self, server: str, channel_names: List[str]):
-        """Attribute: server - Server name. Example: open.rocket.chat"""
         threading.Thread.__init__(self, daemon=True)
         self.__rocket = RocketChat(settings.ROCKET_USERNAME, settings.ROCKET_PASSWORD, server_url=settings.ROCKET_URL)
         self.__ws = websocket.WebSocket()
-        self.__server = server
+        self.__server = server.replace("https:", "").replace("/", "")
         self.__is_closed = True
         self.__is_started = False
         self.__messages_queue = queue.Queue()

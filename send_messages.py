@@ -75,8 +75,11 @@ class Notifier:
         url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
         merge_requests = requests.get(url, params=self.request_params).json()
         for merge_request in merge_requests:
-            if merge_request.get('work_in_progress') and "bot_ignore" not in merge_request.get("labels"):
+            if "bot_ignore" in merge_request.get("labels"):
+                continue
+            if merge_request.get('work_in_progress'):
                 wip_mr.append(merge_request.get("web_url"))
+                continue
             if merge_request.get('merge_status') == 'cannot_be_merged':
                 conflicts.append(merge_request)
                 continue
