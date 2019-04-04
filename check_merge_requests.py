@@ -60,7 +60,7 @@ def proceed_jira_tasks(jira_urls):
             task_id = re.findall(regular_expression, url)[0]
         except IndexError:
             logging.error("Couldn't find task ID in URL {0}".format(url))
-            break
+            continue
         try:
             previous_status = jira.issue(task_id).fields.status.name
             if previous_status == JIRA_TASK_PREVIOUS_STATUS and previous_status != JIRA_TASK_STATUS:
