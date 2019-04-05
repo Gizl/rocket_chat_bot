@@ -8,6 +8,7 @@ import settings
 import traceback
 import json
 from pprint import pprint
+from urllib.parse import urlparse
 
 
 class Message:
@@ -28,7 +29,7 @@ class RocketChatReader(threading.Thread):
         threading.Thread.__init__(self, daemon=True)
         self.__rocket = RocketChat(settings.ROCKET_USERNAME, settings.ROCKET_PASSWORD, server_url=settings.ROCKET_URL)
         self.__ws = websocket.WebSocket()
-        self.__server = server.replace("https:", "").replace("/", "")
+        self.__server = urlparse(server).hostname
         self.__is_closed = True
         self.__is_started = False
         self.__messages_queue = queue.Queue()
