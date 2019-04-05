@@ -27,3 +27,4 @@ TIME_WINDOW_IN_HOURS = 24
 REGULAR_STRING = urljoin(JIRA_BASE_URL, 'browse/.*')
 REGULAR_STRING_TASK = urljoin(JIRA_BASE_URL, 'browse/(.*)')
 
+CREATE_MR_JIRA_TASKS_PARAMS = [os.getenv('GITLAB_PROJECT_ID'), os.getenv('JIRA_PROJECT'), os.getenv('JIRA_USER')]

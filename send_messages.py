@@ -37,12 +37,14 @@ class Notifier:
             all_for_merge = []
             all_conflicts = {}
             projects = {}
+            all_wip_mr = []
             for project_id, developers in project_relations.items():
                 total_impact = sum([x[2] for x in developers])
                 approvers_number = 2 if len(developers) > 3 else 1
                 projects[project_id] = approvers_number
-                merge_requests, for_merge, conflicts = self.get_merge_requests(approvers_number, project_id)
+                merge_requests, for_merge, conflicts, wip_mr = self.get_merge_requests(approvers_number, project_id)
                 all_for_merge.extend(for_merge)
+                all_wip_mr.extend(wip_mr)
                 developers_dict = {y:x for x, y, _ in developers}
                 for conflict in conflicts:
                     all_conflicts.setdefault(developers_dict.get(conflict.get('author').get('username')), []).append(conflict.get('web_url'))
@@ -61,19 +63,21 @@ class Notifier:
                         merge_requests[i][1] -= 1
                         counter += 1
                 channel_message = self.set_leftovers(channel_message, developers, merge_requests)
-            self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts, projects)
-        urls = check_merge_requests.proceed_gitlab_merge_requests()
-        check_merge_requests.proceed_jira_tasks(urls)
+            self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts, projects, all_wip_mr)
+        # urls = check_merge_requests.proceed_gitlab_merge_requests()
+        # check_merge_requests.proceed_jira_tasks(urls)
+        utils.create_mr_jira_tasks(*settings.CREATE_MR_JIRA_TASKS_PARAMS)
 
     def get_merge_requests(self, approvers_number, project_id):
         for_merge = []
         conflicts = []
         formatted_mr = []
+        wip_mr = []
         url = f"{settings.GITLAB_URL}projects/{project_id}/merge_requests"
         merge_requests = requests.get(url, params=self.request_params).json()
         for merge_request in merge_requests:
-            if merge_request.get('work_in_progress'):
-                continue
+            if merge_request.get('work_in_progress') and "bot_ignore" not in merge_request.get("labels"):
+                wip_mr.append(merge_request.get("web_url"))
             if merge_request.get('merge_status') == 'cannot_be_merged':
                 conflicts.append(merge_request)
                 continue
@@ -94,9 +98,9 @@ class Notifier:
                 for_merge.append(merge_request.get('web_url'))
             else:
                 formatted_mr.append([merge_request, approvers_number])
-        return formatted_mr, for_merge, conflicts
+        return formatted_mr, for_merge, conflicts, wip_mr
 
-    def send_notifications(self, channel_name, channel_message, for_merge, conflicts, projects):
+    def send_notifications(self, channel_name, channel_message, for_merge, conflicts, projects, wip_mr):
         nl = "\n"
         if channel_message:
             channel_message = "\n".join(
@@ -113,6 +117,13 @@ class Notifier:
                 [f"\n{f'@{key}' if key else '*Unknown Users*'}: \n{f'{nl}'.join([x for x in values])}" for key, values in conflicts.items()])
             conflicts = f"Please, check MRs for conflicts, unresolved discussions or failed pipelines:\n{conflicts}\n"
             self.rocket.chat_post_message(conflicts, channel=channel_name, alias='BOT NOTIFICATION')
+
+        if wip_mr:
+            wip_mr_message = "".join([f"{mr}\n" for mr in wip_mr])
+            wip_mr_message = f"Please, check WIP MRs. " \
+                             f"You can add <bot_ignore> label to MR for ignoring in future notifications:" \
+                             f"\n{wip_mr_message}"
+            self.rocket.chat_post_message(wip_mr_message, channel=channel_name, alias='BOT NOTIFICATION')
 
         utils.check_merged_requests_for_upvotes(channel_name, projects)
 
