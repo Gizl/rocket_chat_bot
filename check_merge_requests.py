@@ -8,6 +8,7 @@ from jira import JIRA, exceptions as jira_exceptions
 
 from settings import GITLAB_TOKEN, GITLAB_URL, JIRA_NAME, JIRA_PASSWORD, JIRA_BASE_URL, JIRA_TASK_STATUS, JIRA_TASK_PREVIOUS_STATUS, \
                         TIME_WINDOW_IN_HOURS, REGULAR_STRING, REGULAR_STRING_TASK
+import db_api
 
 def proceed_gitlab_merge_requests():
     """
@@ -25,11 +26,14 @@ def proceed_gitlab_merge_requests():
         return set()
 
     merges = list()
-    for project in my_gitlab.projects.list(membership=True, archived=False):
+    project_ids = db_api.DBApi().get_all_project_ids()
+    for project_id in project_ids:
         try:
+            project = my_gitlab.projects.get(project_id)
             merges += project.mergerequests.list()
         except (gitlab.exceptions.GitlabHttpError,
-                gitlab.exceptions.GitlabListError):  # Missing rights to check project's merge requests
+                gitlab.exceptions.GitlabListError,
+                gitlab.exceptions.GitlabGetError):  # Missing rights to check project or unable to find it
             pass
 
     jira_urls = set()
@@ -51,6 +55,7 @@ def proceed_jira_tasks(jira_urls):
     :param jira_urls: set of urls
     :return: None
     """
+
     options = {"server": JIRA_BASE_URL}
     jira = JIRA(options, basic_auth=(JIRA_NAME, JIRA_PASSWORD))
     regular_expression = re.compile(REGULAR_STRING_TASK)
