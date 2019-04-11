@@ -74,6 +74,12 @@ class DBApi:
         response = f"Users in the project {project_id}:\n{response}"
         return response
 
+    def get_all_project_ids(self) -> list:
+
+        self.__cursor.execute("""SELECT project_id FROM project""")
+        records = self.__cursor.fetchall()
+        return [record[0] for record in records]
+
     # internal methods:
     def __find_user(self, username: str) -> bool:
 
