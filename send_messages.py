@@ -64,8 +64,9 @@ class Notifier:
                         counter += 1
                 channel_message = self.set_leftovers(channel_message, developers, merge_requests)
             self.send_notifications(channel_name, channel_message, all_for_merge, all_conflicts, projects, all_wip_mr)
-        urls = check_merge_requests.proceed_gitlab_merge_requests()
-        check_merge_requests.proceed_jira_tasks(urls)
+        # urls = check_merge_requests.proceed_gitlab_merge_requests()
+        # check_merge_requests.proceed_jira_tasks(urls)
+        utils.create_mr_jira_tasks(*settings.CREATE_MR_JIRA_TASKS_PARAMS)
 
     def get_merge_requests(self, approvers_number, project_id):
         for_merge = []
