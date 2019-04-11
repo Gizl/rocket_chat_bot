@@ -9,6 +9,8 @@ JIRA_NAME = os.getenv("JIRA_NAME")
 JIRA_PASSWORD = os.getenv("JIRA_PASSWORD")
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_TASK_STATUS = os.getenv("JIRA_TASK_STATUS")
+JIRA_USER = os.getenv("JIRA_USER")
+JIRA_PROJECT = os.getenv("JIRA_PROJECT")
 # DATABASE
 DB_PATH = os.getenv("DB_PATH")
 # GITLAB
